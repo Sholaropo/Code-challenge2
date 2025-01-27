@@ -142,6 +142,11 @@ export const deleteBook = (id: string): boolean => {
  * const borrowedBook = borrowBook("123", "user456");
  * console.log(borrowedBook.dueDate);
  */
+
+const borrowerLimits: Record<string, number> = {};
+
+const MAX_BORROW_LIMIT = 5;
+
 export const borrowBook = (id: string, borrowerId: string): Book => {
     const book = books.find((b) => b.id === id);
 
@@ -153,13 +158,19 @@ export const borrowBook = (id: string, borrowerId: string): Book => {
         throw new Error(`Book with ID ${id} is already borrowed`);
     }
 
+    const currentBorrowCount = borrowerLimits[borrowerId] || 0;
+    if (currentBorrowCount >= MAX_BORROW_LIMIT) {
+        throw new Error(
+            `Borrower with ID ${borrowerId} has reached the borrow limit of ${MAX_BORROW_LIMIT}`
+        );
+    }
+
+    // Update book and track borrower
     book.isBorrowed = true;
     book.borrowerId = borrowerId;
+    book.dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-    // 14 days from now
-    book.dueDate = new Date(
-        Date.now() + 14 * 24 * 60 * 60 * 1000
-    ).toISOString();
+    borrowerLimits[borrowerId] = currentBorrowCount + 1;
 
     return book;
 };
