@@ -1,69 +1,36 @@
-const express = require("express");
-const app = express();
-app.use(express.json());
+import { Request, Response } from "express";
+import { books } from "../data/books"; // Mock book data source
 
+export const returnBook = (req: Request, res: Response) => {
+  const { id } = req.params;
 
+  // Find the book by ID
+  const book = books.find((b) => b.id === parseInt(id, 10));
 
-const borrowingHistory = [];
-const userBorrowedBooks = {}; // Tracks the number of books borrowed by each user
-
-// Borrowing limit and due date policy
-const BORROW_LIMIT = 5;
-const DUE_DATE_DAYS = 14;
-
-// Helper function to calculate due date
-function calculateDueDate() {
-  const currentDate = new Date();
-  currentDate.setDate(currentDate.getDate() + DUE_DATE_DAYS);
-  return currentDate;
-}
-
-// Endpoint to borrow a book
-app.post("/api/v1/books/:id/borrow", (req, res) => {
-  const bookId = parseInt(req.params.id);
-  const { borrowerId } = req.body;
-
-  // Validate request
-  if (!borrowerId) {
-    return res.status(400).json({ error: "Borrower ID is required" });
-  }
-
-  const book = books.find((b) => b.id === bookId);
-
-  // Check if book exists
+  // Check if the book exists
   if (!book) {
-    return res.status(404).json({ error: "Book not found" });
+    return res.status(404).json({ message: "Book not found" });
   }
 
-  // Check if book is already borrowed
-  if (book.borrowerId) {
-    return res.status(400).json({ error: "Book is already borrowed" });
+  // Check if the book is currently borrowed
+  if (!book.borrowerId) {
+    return res.status(400).json({ message: "Book is not currently borrowed" });
   }
 
-  // Check user's borrowing limit
-  if (userBorrowedBooks[borrowerId] >= BORROW_LIMIT) {
-    return res.status(400).json({ error: "Borrowing limit reached" });
+  // Handle late return logic
+  const today = new Date();
+  if (book.dueDate && today > new Date(book.dueDate)) {
+    const daysLate = Math.ceil(
+      (today.getTime() - new Date(book.dueDate).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    console.warn(`Book returned ${daysLate} days late.`);
+    // Add logic for notifying borrower or applying fees (if required)
   }
 
-  // Mark book as borrowed
-  const dueDate = calculateDueDate();
-  book.borrowerId = borrowerId;
-  book.dueDate = dueDate;
-
-  userBorrowedBooks[borrowerId] = (userBorrowedBooks[borrowerId] || 0) + 1;
-
-  
+  // Reset borrower details and make the book available
+  book.borrowerId = null;
+  book.dueDate = null;
 
   // Respond with success
-  res.status(200).json({
-    message: "Book borrowed successfully",
-    bookId: book.id,
-    borrowerId,
-    dueDate,
-  });
-});
-
-// Example server
-app.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
-});
+  res.status(200).json({ message: "Book successfully returned", book });
+};
