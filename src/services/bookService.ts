@@ -165,7 +165,6 @@ export const borrowBook = (id: string, borrowerId: string): Book => {
         );
     }
 
-    // Update book and track borrower
     book.isBorrowed = true;
     book.borrowerId = borrowerId;
     book.dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
