@@ -52,22 +52,29 @@ export const deleteBook = (req: Request, res: Response): void => {
     }
 };
 
+
 export const borrowBook = (req: Request, res: Response): void => {
     try {
         const { id } = req.params;
-        const borrowerId = req.body.borrowerId;
-        const result = bookService.borrowBook(id, borrowerId);
-        if (result) {
-            res.status(200).json({ message: "Book borrowed", data: result });
-        } else {
-            res.status(404).json({
-                message: "Book not found or already borrowed",
-            });
+        const { borrowerId } = req.body;
+
+        if (!borrowerId) {
+            res.status(400).json({ message: "Borrower ID is required" });
+            return;
         }
-    } catch (error) {
-        res.status(500).json({ message: "Error borrowing book" });
+
+        const result = bookService.borrowBook(id, borrowerId);
+
+        if (result) {
+            res.status(200).json({ message: "Book borrowed successfully", data: result });
+        } else {
+            res.status(404).json({ message: "Book not found or unavailable for borrowing" });
+        }
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
     }
 };
+
 
 export const returnBook = (req: Request, res: Response): void => {
     try {
